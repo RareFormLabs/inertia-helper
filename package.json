@@ -16,7 +16,7 @@
     }
   },
   "scripts": {
-    "build": "vite build",
+    "build": "vite build --mode library",
     "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
