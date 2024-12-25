@@ -5,33 +5,56 @@ interface FormProps {
   [key: string]: any;
 }
 
-const getCsrfMetaEl = () => {
-  return document.head.querySelector("meta[csrf]") as HTMLMetaElement | null;
-};
+interface SessionResponse {
+  csrfTokenName: string;
+  csrfTokenValue: string;
+}
 
-const getCsrfToken = (csrfMeta?: HTMLMetaElement) => {
+interface CsrfToken {
+  [key: string]: string;
+}
+
+const CSRF_ENDPOINT = "/actions/users/session-info";
+
+/**
+ * Gets CSRF meta element from document head
+ */
+const getCsrfMetaEl = () =>
+  document.head.querySelector<HTMLMetaElement>("meta[csrf]");
+
+/**
+ * Extracts CSRF token from meta element
+ */
+const getCsrfToken = (csrfMeta?: HTMLMetaElement | null): CsrfToken | null => {
   const meta = csrfMeta ?? getCsrfMetaEl();
   const tokenName = meta?.getAttribute("name");
   const tokenValue = meta?.getAttribute("content");
-  if (!tokenName || !tokenValue) {
-    return null;
-  }
-  return { [tokenName as string]: tokenValue };
+
+  return tokenName && tokenValue ? { [tokenName]: tokenValue } : null;
 };
 
-const fetchNewCsrfToken = async () => {
-  const getSessionInfo = function () {
-    return fetch("/actions/users/session-info", {
-      headers: {
-        Accept: "application/json",
-      },
-    }).then((response) => response.json());
-  };
-  const sessionInfo = await getSessionInfo();
-  return {
-    csrfTokenName: sessionInfo.csrfTokenName,
-    csrfTokenValue: sessionInfo.csrfTokenValue,
-  };
+/**
+ * Fetches new CSRF token from server
+ * @throws Error if fetch fails or response is invalid
+ */
+const fetchNewCsrfToken = async (): Promise<SessionResponse> => {
+  try {
+    const response = await fetch(CSRF_ENDPOINT, {
+      headers: { Accept: "application/json" },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    throw new Error(
+      `Failed to fetch CSRF token: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
+  }
 };
 
 const cUseForm = (props: FormProps) => {
